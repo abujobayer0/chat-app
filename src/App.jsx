@@ -23,6 +23,11 @@ const App = () => {
       }
     }
 
+    // Request permission for notifications
+    if (Notification.permission !== 'granted') {
+      Notification.requestPermission();
+    }
+
     // Fetch messages from the server
     axios.get('https://chat-server-fksr.onrender.com/api/messages').then((res) => {
       setMessages(res.data);
@@ -31,6 +36,16 @@ const App = () => {
     // Listen for new messages
     socket.on('new-message', (message) => {
       setMessages((prevMessages) => [...prevMessages, message]);
+
+      // Check if the tab is not focused, then show a notification
+      if (document.visibilityState === 'hidden') {
+        if (Notification.permission === 'granted') {
+          new Notification('New message', {
+            body: `${message.username}: ${message.content}`,
+            icon: 'https://iili.io/2V1s2A7.md.jpg', // You can replace this with your icon
+          });
+        }
+      }
     });
 
     return () => {
