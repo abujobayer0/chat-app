@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { io } from 'socket.io-client';
 
@@ -8,8 +8,21 @@ const App = () => {
   const [messages, setMessages] = useState([]);
   const [username, setUsername] = useState('');
   const [content, setContent] = useState('');
+  const messagesEndRef = useRef(null);
 
   useEffect(() => {
+    // Check if username is saved in localStorage, if not, ask for it
+    const storedUsername = localStorage.getItem('username');
+    if (storedUsername) {
+      setUsername(storedUsername);
+    } else {
+      const userNameFromAlert = prompt("Please enter your username:");
+      if (userNameFromAlert) {
+        setUsername(userNameFromAlert);
+        localStorage.setItem('username', userNameFromAlert);
+      }
+    }
+
     // Fetch messages from the server
     axios.get('https://chat-server-fksr.onrender.com/api/messages').then((res) => {
       setMessages(res.data);
@@ -25,6 +38,13 @@ const App = () => {
     };
   }, []);
 
+  // Scroll to the bottom whenever messages change
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
+
   const sendMessage = async (e) => {
     e.preventDefault();
     if (username && content) {
@@ -37,13 +57,13 @@ const App = () => {
     <div
       style={{
         padding: '10px',
-        paddingBottom:"100px",
+        paddingBottom: "100px",
         fontFamily: 'Arial, sans-serif',
-        maxWidth: '600px',
+        minWidth: '100vw',
+        minHeight: '100vh',
         margin: '0 auto',
         display: 'flex',
         flexDirection: 'column',
-        height: '100vh',
         boxSizing: 'border-box',
         backgroundColor: '#f5f5f5',
       }}
@@ -52,6 +72,7 @@ const App = () => {
         style={{
           display: 'flex',
           justifyContent: 'space-between',
+          width: '100%',
           alignItems: 'center',
           padding: '10px',
           borderBottom: '1px solid #ddd',
@@ -66,6 +87,7 @@ const App = () => {
           flexGrow: 1,
           padding: '10px',
           overflowY: 'scroll',
+          width: '100%',
           display: 'flex',
           flexDirection: 'column',
           gap: '10px',
@@ -97,6 +119,8 @@ const App = () => {
             </div>
           </div>
         ))}
+        {/* Reference to the last message for scrolling */}
+        <div ref={messagesEndRef} />
       </div>
       <form
         onSubmit={sendMessage}
@@ -109,20 +133,6 @@ const App = () => {
           backgroundColor: '#fff',
         }}
       >
-        <input
-          type="text"
-          placeholder="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          style={{
-            padding: '10px',
-            borderRadius: '20px',
-            border: '1px solid #ccc',
-            flexGrow: 1,
-            outline: 'none',
-            fontSize: '14px',
-          }}
-        />
         <input
           type="text"
           placeholder="Message"
