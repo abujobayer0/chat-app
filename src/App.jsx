@@ -2,12 +2,17 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { io } from 'socket.io-client';
 
-const socket = io('https://chat-server-fksr.onrender.com');
+// const baseURI="http://localhost:8000"
+const baseURI="https://chat-server-fksr.onrender.com"
+
+const socket = io(baseURI);
 
 const App = () => {
   const [messages, setMessages] = useState([]);
   const [username, setUsername] = useState('');
   const [content, setContent] = useState('');
+  const [typing, setTyping] = useState(false);
+  const [typingUsername, setTypingUsername] = useState('');
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -23,21 +28,35 @@ const App = () => {
       }
     }
 
-
     // Fetch messages from the server
-    axios.get('https://chat-server-fksr.onrender.com/api/messages').then((res) => {
+    axios.get(`${baseURI}/api/messages`).then((res) => {
       setMessages(res.data);
     });
 
     // Listen for new messages
     socket.on('new-message', (message) => {
       setMessages((prevMessages) => [...prevMessages, message]);
+    });
 
+    // Listen for typing indicator
+    socket.on('typing', (username) => {
+      setTyping(true);
+      setTypingUsername(username);
+    });
 
+    // Listen for message seen updates
+    socket.on('message-updated', (updatedMessage) => {
+      setMessages((prevMessages) =>
+        prevMessages.map((msg) =>
+          msg._id === updatedMessage._id ? updatedMessage : msg
+        )
+      );
     });
 
     return () => {
       socket.off('new-message');
+      socket.off('typing');
+      socket.off('message-updated');
     };
   }, []);
 
@@ -51,9 +70,23 @@ const App = () => {
   const sendMessage = async (e) => {
     e.preventDefault();
     if (username && content) {
-      await axios.post('https://chat-server-fksr.onrender.com/api/messages', { username, content });
+      const newMessage = await axios.post(`${baseURI}/api/messages`, { username, content });
+      setMessages((prevMessages) => [...prevMessages, newMessage.data]);
       setContent('');
+      socket.emit('typing', '');  // Stop the typing indicator when the message is sent
     }
+  };
+
+  const handleTyping = () => {
+    if (content) {
+      socket.emit('typing', username);
+    } else {
+      socket.emit('typing', '');
+    }
+  };
+
+  const markMessageAsSeen = (messageId) => {
+    socket.emit('message-seen', { messageId, username });
   };
 
   return (
@@ -98,13 +131,14 @@ const App = () => {
       >
         {messages.map((msg, index) => (
           <div
-            key={index}
+            key={msg._id || index}
             style={{
               display: 'flex',
               flexDirection: username === msg.username ? 'row-reverse' : 'row',
               alignItems: 'center',
               gap: '10px',
             }}
+            onClick={() => markMessageAsSeen(msg._id)}
           >
             <div
               style={{
@@ -120,10 +154,16 @@ const App = () => {
               <strong>{msg.username}</strong>
               <p style={{ margin: 0, fontSize: '14px' }}>{msg.content}</p>
             </div>
+            {msg.seenBy.includes(username) && <span style={{ fontSize: '12px', color: '#888' }}>Seen</span>}
           </div>
         ))}
         {/* Reference to the last message for scrolling */}
         <div ref={messagesEndRef} />
+        {typing && typingUsername !== username && (
+          <div style={{ fontStyle: 'italic', color: '#007BFF' }}>
+            {typingUsername} is typing...
+          </div>
+        )}
       </div>
       <form
         onSubmit={sendMessage}
@@ -140,7 +180,10 @@ const App = () => {
           type="text"
           placeholder="Message"
           value={content}
-          onChange={(e) => setContent(e.target.value)}
+          onChange={(e) => {
+            setContent(e.target.value);
+            handleTyping();
+          }}
           style={{
             padding: '10px',
             borderRadius: '20px',
