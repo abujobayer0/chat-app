@@ -23,11 +23,19 @@ const App = () => {
       }
     }
 
-    // Request permission for notifications
-    if (Notification.permission !== 'granted') {
-      Notification.requestPermission();
-    }
-
+    useEffect(() => {
+      // Request permission for notifications
+      if (Notification.permission !== 'granted') {
+        Notification.requestPermission().then((permission) => {
+          if (permission === 'granted') {
+            console.log('Notification permission granted');
+          } else {
+            console.log('Notification permission denied');
+          }
+        });
+      }
+    }, []);
+    
     // Fetch messages from the server
     axios.get('https://chat-server-fksr.onrender.com/api/messages').then((res) => {
       setMessages(res.data);
