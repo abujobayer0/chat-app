@@ -2,5 +2,22 @@
   max-width: 1280px;
   margin: 0 auto;
   padding: 2rem;
+  width: 100%;
   text-align: center;
+}
+body{
+  width: 100%;
+  background-color: #f5c6cb;
+}.typing-indicator {
+  animation: typing 1.5s infinite;
+  font-size: 14px;
+  font-style: italic;
+  color: rgba(0, 0, 0, 0.7);
+  display: inline-block;
+}
+
+@keyframes typing {
+  0%, 100% { content: "."; }
+  33% { content: ".."; }
+  66% { content: "..."; }
 }
