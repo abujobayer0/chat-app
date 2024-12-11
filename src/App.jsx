@@ -37,6 +37,7 @@ const App = () => {
     <div
       style={{
         padding: '10px',
+        paddingBottom:"100px",
         fontFamily: 'Arial, sans-serif',
         maxWidth: '600px',
         margin: '0 auto',
